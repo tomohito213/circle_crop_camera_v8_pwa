@@ -46,7 +46,7 @@
   .toggle[data-active="true"]{ outline: 2px solid var(--ring); background: rgba(46,204,113,0.12); }
   .toggle.warn[data-active="true"]{ outline-color: var(--yellow); background: rgba(241,196,15,0.12); }
   .link-like{ background:transparent; color:var(--muted); }
-  .stage{ position:relative; flex:1; min-height: 40vh; overflow:hidden; margin: 8px 0; }
+  
   video#preview{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; }
   canvas#overlay{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
   .flash{ position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; transition: opacity 120ms ease-out; }
@@ -84,7 +84,7 @@
   }
 
   /* Ensure top stage is visible at the top */
-  .stage{ min-height: 42vh; }
+  
 
   /* Accessible visually-hidden file input (for iOS Safari) */
   .visually-hidden-file{
@@ -111,104 +111,54 @@
     background:#000;
   }
 
-  /* Full-screen camera overlay (iPhone friendly) */
-  html, body { height:100%; min-height:100%; margin:0; padding:0; background:#000; }
-  .stage-container{ position:relative; }
-  .stage{ position:relative; }
-
-  /* media layers fill the stage */
+  /* iPhone-friendly fullscreen camera */
+  html, body {
+    height: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    background: #000;
+  }
+  .app { margin:0; padding:0; }
+  .stage{ position: relative; }
+  /* base: svh; ensure safe-area insets */
+  .stage{
+    height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height: 480px;
+  }
+  /* prefer the largest viewport if available */
+  @supports (height: 100lvh){
+    .stage{
+      height: calc(100lvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
+  }
+  @supports (height: 100dvh){
+    .stage{
+      height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
+  }
+  /* iOS fallback */
+  @supports (-webkit-touch-callout: none){
+    html, body { height: -webkit-fill-available; min-height: -webkit-fill-available; }
+    .stage{
+      height: calc(-webkit-fill-available - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
+  }
+  /* media layers fill stage */
   .stage > video#preview,
   .stage > img#photo-preview,
   .stage > canvas#overlay{
-    position:absolute; inset:0; width:100%; height:100%; object-fit:contain;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
-
-  /* Overlay toggle button */
-  .fs-btn{
-    position:absolute; top:calc(env(safe-area-inset-top) + 8px); right:8px;
-    z-index:1000; border:1px solid #888; background:rgba(0,0,0,.45); color:#fff;
-    padding:8px 10px; border-radius:999px; font-size:14px;
-    backdrop-filter: blur(4px);
-  }
-
-  /* Fullscreen state */
-  .shoot-full{
-    position:fixed; inset:0;
-    width:100vw;
-    height:100svh;
-    z-index:9990; background:#000;
-  }
-  @supports (height: 100lvh){
-    .shoot-full{ height:100lvh; }
-  }
-  @supports (height: 100dvh){
-    .shoot-full{ height:100dvh; }
-  }
-  @supports (-webkit-touch-callout: none){
-    .shoot-full{ height:-webkit-fill-available; }
-  }
-  .shoot-full > .stage{ width:100%; height:100%; }
-
-  /* Hide non-camera UI in fullscreen */
-  body.fullscreen .app-title,
-  body.fullscreen header,
-  body.fullscreen footer{ display:none !important; }
-
-  /* Option: emphasize cover to maximize visuals in fullscreen */
-  body.fullscreen .stage > video#preview,
-  body.fullscreen .stage > img#photo-preview{
+  /* optional cover mode for maximum visual size (edges may crop) */
+  .stage.stage-cover > video#preview,
+  .stage.stage-cover > img#photo-preview{
     object-fit: cover;
   }
-
-  /* Fullscreen shutter (bottom-center) */
-  .fs-shutter{
-    position:absolute;
-    left:50%;
-    transform: translateX(-50%);
-    bottom: calc(env(safe-area-inset-bottom) + 16px);
-    z-index: 1001;
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: #fff;
-    border: none;
-    box-shadow: 0 2px 12px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.9);
-    display: none; /* show only in fullscreen */
-  }
-  body.fullscreen .fs-shutter{ display: block; }
-
-  /* Hide default capture button in fullscreen (avoid duplicate) */
-  body.fullscreen #capture{ display:none !important; }
-
-  /* Capture row background */
-  .capture-row{ background:#000; }
-
-  /* Fullscreen bottom black bar to fully occlude background under shutter */
-  .fs-bar{
-    position:absolute;
-    left:0; right:0; bottom:0;
-    background:#000;
-    z-index:1001;
-    display:none; /* only in fullscreen */
-    align-items:center;
-    justify-content:center;
-    padding:12px 0 calc(env(safe-area-inset-bottom) + 12px);
-  }
-  body.fullscreen .fs-bar{ display:flex; }
-
-  /* Shutter inside the bar: center; size large; no absolute positioning */
-  .fs-shutter{
-    position: static;
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: #fff;
-    border: none;
-    box-shadow: 0 2px 12px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.9);
-    display: block;
-  }
-  /* Hide the normal capture row in fullscreen (avoid duplicate) */
-  body.fullscreen #capture{ display:none !important; }
 </style>
 </head>
 <body>
@@ -216,25 +166,27 @@
   <div class="app-title" style="text-align:center; font-weight:700; font-size:20px; padding:10px;">画像切り取りカメラ（HTML版 v2）</div>
 
   <!-- TOP: camera + shutter -->
-
-  <div class="stage-container">
 <main class="stage" id="stage">
     <video id="preview" playsinline autoplay muted></video>
     <img id="photo-preview" alt="" />
     <canvas id="overlay"></canvas>
     <div class="flash" id="flash"></div>
   </main>
-    <div id="fs-bar" class="fs-bar">
-  <button id="fs-shutter" class="fs-shutter" aria-label="撮影"></button>
-</div>
-    <!-- Fullscreen toggle button overlay -->
-    <button id="fs-toggle" class="fs-btn"><span id="fs-toggle-label">全画面</span></button>
+<div class="row" style="justify-content:center; margin:8px 0;">
+<div style="flex:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+      <button id="capture" class="btn btn-capture"></button>
+      <a id="dl" class="toggle link-like hidden" download style="margin-top:8px;">保存リンクを開く</a>
+    </div>
   </div>
 
   
 
   <header>
-    <div class="row capture-row">
+    <div class="row" style="justify-content:flex-end; gap:8px; margin-bottom:6px;">
+      <button id="view-fit-toggle" class="toggle">フル表示</button>
+    </div>
+    
+    <div class="row">
       
       <button id="switch-source" class="toggle" title="前面/背面を切替">カメラ切替</button>
       <div class="grow"></div>
@@ -277,12 +229,7 @@
       <label id="pick-file" class="toggle link-like" for="file-fallback">写真から読み込む</label> <button id="back-to-camera" class="toggle link-like hidden" style="margin-left:8px;">戻る</button> <button id="stop" class="toggle" style="margin-left:8px;">再開</button>
     </div>
   </header>
-<div class="row" style="justify-content:center; margin:8px 0;">
-<div style="flex:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-      <button id="capture" class="btn btn-capture"></button>
-      <a id="dl" class="toggle link-like hidden" download style="margin-top:8px;">保存リンクを開く</a>
-    </div>
-  </div>
+
 
   
   
@@ -796,33 +743,17 @@ fileInput.addEventListener('change', async (e) => {
     });
   }
 
-  // Fullscreen toggle for camera
-  const fsBtn = document.getElementById('fs-toggle');
-  const fsLabel = document.getElementById('fs-toggle-label');
-  const stageWrap = document.querySelector('.stage-container');
-
-  function updateFsLabel(){
-    if (!fsLabel) return;
-    fsLabel.textContent = document.body.classList.contains('fullscreen') ? '通常表示' : '全画面';
+  const fitToggle = document.getElementById('view-fit-toggle');
+  function updateFitBtn(){
+    if (!fitToggle) return;
+    fitToggle.textContent = stage.classList.contains('stage-cover') ? '標準表示' : 'フル表示';
   }
-  function toggleFullscreenCam(){
-    if (!stageWrap) return;
-    stageWrap.classList.toggle('shoot-full');
-    document.body.classList.toggle('fullscreen');
-    updateFsLabel();
-    // After resizing, keep overlay in sync
-    requestAnimationFrame(drawOverlay);
-  }
-  if (fsBtn){
-    fsBtn.addEventListener('click', toggleFullscreenCam);
-    updateFsLabel();
-  }
-
-  const fsShutter = document.getElementById('fs-shutter');
-  if (fsShutter && captureBtn){
-    fsShutter.addEventListener('click', () => {
-      try { captureBtn.click(); } catch(e){ console.warn('fs-shutter failed', e); }
+  if (fitToggle){
+    fitToggle.addEventListener('click', () => {
+      stage.classList.toggle('stage-cover');
+      updateFitBtn();
     });
+    updateFitBtn();
   }
 
 })();
